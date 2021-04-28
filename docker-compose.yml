@@ -1,0 +1,76 @@
+version: '3'
+services:
+
+  #MariaDB Service
+  db:
+#    build:
+#      context: .
+#      dockerfile: ./docker/db/Dockerfile
+    image: mariadb
+    container_name: db
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: notejam
+      MYSQL_ROOT_PASSWORD: notejam_db
+    volumes:
+      - dbdata:/var/lib/mysql/
+    networks:
+      - app-network
+
+  #FLask Service
+  app:
+    build:
+      context: .
+      dockerfile: ./docker/app/Dockerfile
+    image: notejam/app
+    container_name: app
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "5000:5000"
+    environment:
+      - "ENVIRONMENT=development"
+    working_dir: /app
+    volumes:
+      - ./flask/:/app
+    networks:
+      - app-network
+    depends_on:
+      - db
+    links:
+      - db
+
+  #Nginx Service
+#  webserver:
+#    build:
+#      context: .
+#      dockerfile: ./docker/webserver/Dockerfile
+#    image: laravel/webserver
+#    container_name: webserver
+#    restart: unless-stopped
+#    tty: true
+#    ports:
+#      - "80:80"
+#      - "443:443"
+#    volumes:
+#      - ./src/public/:/var/www/public/
+#    networks:
+#      - app-network
+#    depends_on:
+#      - app
+#    links:
+#      - app
+
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
+
+#Volumes
+volumes:
+  dbdata:
+    driver: local
