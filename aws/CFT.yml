@@ -105,7 +105,7 @@ Resources:
     Properties:
       RepositoryName: "notejam/app"
 
-  NoteJamECSCluster:
+  ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
       CapacityProviders:
@@ -156,3 +156,16 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: "/ecs/notejam"
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: "application"
+      Name: "notejam-alb"
+      Scheme: "internet-facing"
+      Subnets:
+        - !Ref Subnet0
+        - !Ref Subnet1
+      SecurityGroups:
+        - !Ref PublicIngressSG
+      IpAddressType: "ipv4"
