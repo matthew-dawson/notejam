@@ -169,3 +169,14 @@ Resources:
       SecurityGroups:
         - !Ref PublicIngressSG
       IpAddressType: "ipv4"
+
+  LoadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: "notejam-tg"
+      Protocol: "HTTP"
+      Port: 80
+      VpcId: !Ref VPC
+      HealthCheckProtocol: "HTTP"
+      HealthCheckPort: 80
+      TargetType: "ip"
