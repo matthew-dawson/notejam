@@ -100,7 +100,7 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
 
-  NotejamRepository:
+  ECRRepository:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: "notejam/app"
@@ -128,7 +128,7 @@ Resources:
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 
-  NoteJamECSTaskDefinition:
+  ECSTaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
       RequiresCompatibilities:
@@ -139,7 +139,7 @@ Resources:
       ContainerDefinitions:
         -
           Name: "notejam-app"
-          Image: !Ref NotejamRepository
+          Image: !Join [ '/', [ !Join [ '.', [ !Ref AWS::AccountId, 'dkr.ecr', !Ref AWS::Region, 'amazonaws.com' ] ], !Ref ECRRepository ] ]
           PortMappings:
             -
               ContainerPort: 5000
@@ -147,7 +147,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-                awslogs-group : /ecs/notejam-app
+                awslogs-group : /ecs/notejam
                 awslogs-region : eu-west-2
                 awslogs-stream-prefix : ecs
       ExecutionRoleArn: !Ref ECSTaskExecutionRole
@@ -168,6 +168,7 @@ Resources:
         - !Ref Subnet1
       SecurityGroups:
         - !Ref PublicIngressSG
+        - !GetAtt VPC.DefaultSecurityGroup
       IpAddressType: "ipv4"
 
   LoadBalancerTargetGroup:
@@ -191,3 +192,31 @@ Resources:
         -
           Type: "forward"
           TargetGroupArn: !Ref LoadBalancerTargetGroup
+
+#  ECSService:
+#    Type: AWS::ECS::Service
+#    Properties:
+#      ServiceName: notejam-service
+#      TaskDefinition: !Ref ECSTaskDefinition
+#      Cluster: !Ref ECSCluster
+#      NetworkConfiguration:
+#        AwsvpcConfiguration:
+#          Subnets:
+#            - !Ref Subnet0
+#            - !Ref Subnet1
+#          SecurityGroups:
+#            - !GetAtt VPC.DefaultSecurityGroup
+#          AssignPublicIp: ENABLED
+##      LoadBalancers:
+##        -
+##          ContainerName: "notejam-app"
+##          ContainerPort: 5000
+##          LoadBalancerName: !GetAtt LoadBalancer.LoadBalancerName
+##          TargetGroupArn: !Ref LoadBalancerTargetGroup
+##      ServiceRegistries:
+##        -
+##          !Ref PrivateDNS
+#      DesiredCount: 1
+#      LaunchType: "FARGATE"
+#      PlatformVersion: "1.4.0"
+#      SchedulingStrategy: "REPLICA"
