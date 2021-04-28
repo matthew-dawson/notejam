@@ -48,7 +48,7 @@ services:
 #    build:
 #      context: .
 #      dockerfile: ./docker/webserver/Dockerfile
-#    image: laravel/webserver
+#    image: notejam/webserver
 #    container_name: webserver
 #    restart: unless-stopped
 #    tty: true
