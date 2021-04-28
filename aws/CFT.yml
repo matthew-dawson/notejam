@@ -128,25 +128,26 @@ Resources:
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 
-#  NoteJamECSTaskDefinition:
-#    Type: AWS::ECS::TaskDefinition
-#    Properties:
-#      RequiresCompatibilities:
-#        - "FARGATE"
-#      NetworkMode: awsvpc
-#      Cpu: 256
-#      Memory: 512
-#      ContainerDefinitions:
-#        -
-#          Name: "notejam-app"
-#          Image: !Ref NotejamRepository
-#          PortMappings:
-#            -
-#              ContainerPort: 5000
-#              Protocol: tcp
-#          LogConfiguration:
-#            LogDriver: awslogs
-#            Options:
-#                awslogs-group : /ecs/notejam-app
-#                awslogs-region : eu-west-2
-#                awslogs-stream-prefix : ecs
+  NoteJamECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      RequiresCompatibilities:
+        - "FARGATE"
+      NetworkMode: awsvpc
+      Cpu: 256
+      Memory: 512
+      ContainerDefinitions:
+        -
+          Name: "notejam-app"
+          Image: !Ref NotejamRepository
+          PortMappings:
+            -
+              ContainerPort: 5000
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+                awslogs-group : /ecs/notejam-app
+                awslogs-region : eu-west-2
+                awslogs-stream-prefix : ecs
+      ExecutionRoleArn: !Ref ECSTaskExecutionRole
