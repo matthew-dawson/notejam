@@ -151,3 +151,8 @@ Resources:
                 awslogs-region : eu-west-2
                 awslogs-stream-prefix : ecs
       ExecutionRoleArn: !Ref ECSTaskExecutionRole
+
+  CloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: "/ecs/notejam"
