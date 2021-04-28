@@ -180,3 +180,14 @@ Resources:
       HealthCheckProtocol: "HTTP"
       HealthCheckPort: 80
       TargetType: "ip"
+
+  LoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Protocol: "HTTP"
+      Port: 80
+      DefaultActions:
+        -
+          Type: "forward"
+          TargetGroupArn: !Ref LoadBalancerTargetGroup
