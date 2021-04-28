@@ -14,7 +14,7 @@ services:
       - "3306:3306"
     environment:
       MYSQL_DATABASE: notejam
-      MYSQL_ROOT_PASSWORD: notejam_db
+      MYSQL_ROOT_PASSWORD: notejampass
     volumes:
       - dbdata:/var/lib/mysql/
     networks:
