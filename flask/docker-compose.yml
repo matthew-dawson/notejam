@@ -3,9 +3,6 @@ services:
 
   #MariaDB Service
   db:
-#    build:
-#      context: .
-#      dockerfile: ./docker/db/Dockerfile
     image: mariadb
     container_name: db
     restart: unless-stopped
@@ -39,7 +36,7 @@ services:
       FLASK_ENV: 'development'
     working_dir: /app
     volumes:
-      - ./flask/:/app
+      - ./:/app
     networks:
       - app-network
     depends_on:

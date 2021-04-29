@@ -1,7 +1,7 @@
 FROM python:latest
 
 WORKDIR /app
-COPY ./flask /app/
+COPY . /app/
 
 RUN set -ex ;\
     pip3 install -r requirements.txt &&\
