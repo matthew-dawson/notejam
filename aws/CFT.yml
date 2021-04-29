@@ -215,10 +215,13 @@ Resources:
                 awslogs-group : /ecs/notejam
                 awslogs-region : eu-west-2
                 awslogs-stream-prefix : ecs
-#          Environment:
-#            -
-#              ENVIRONMENT: production
-#              SQL_URI: !Join [ [ '/' ], !Join [ [ '@' ], !Join [ [ '' ], 'mysql://', !Join [ [ ':' ], !Ref DBUsername, !Ref DBPassword ] ], !GetAtt Database.Endpoint.Address ], !Ref DBName ]
+          Environment:
+            -
+              Name: ENVIRONMENT
+              Value: production
+            -
+              Name: SQL_URI
+              Value: !Join [ '/', [ 'mysql:/', !Join [ '@', [ !Join [ ':', [ !Ref DBUsername, !Ref DBPassword ] ], !Join [ '/', [ !GetAtt Database.Endpoint.Address, !Ref DBName ] ] ] ] ] ]
       ExecutionRoleArn: !Ref ECSTaskExecutionRole
 
   CloudWatchLogGroup:
