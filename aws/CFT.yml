@@ -5,20 +5,65 @@ Parameters:
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
     Default: 'notejam'
-    Description: The notjam database name
+    Description: The notejam database name
     MaxLength: '64'
     MinLength: '1'
     Type: String
+  DBUsername:
+    NoEcho: 'true'
+    Description: Username for MySQL database access
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
+    Default: 'notejamuser'
+  DBPassword:
+    NoEcho: 'true'
+    Description: Password for Mysql database access
+    Type: String
+    MinLength: '8'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: Must contain only alphanumeric characters.
+    Default: 'notejampass'
   DBRootPassword:
     AllowedPattern: '[a-zA-Z0-9]*'
     ConstraintDescription: must contain only alphanumeric characters.
-    Default: 'notejampass'
+    Default: 'supersecret'
     Description: MySQL root password
     MaxLength: '41'
     MinLength: '8'
     NoEcho: 'true'
     Type: String
-  ## Container type
+  DBInstanceClass:
+    Default: db.t3.micro
+    Description: DB instance class
+    Type: String
+    ConstraintDescription: Must select a valid DB instance type.
+  DBAllocatedStorage:
+    Default: '20'
+    Description: The size of the database (GiB)
+    Type: Number
+    MinValue: '20'
+    MaxValue: '65536'
+    ConstraintDescription:  Must be between 20 and 65536 GiB
+  DBInstanceID:
+    Default: notejamdb
+    Description: Notejam DB instance
+    Type: String
+    MinLength: '1'
+    MaxLength: '63'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must begin with a letter and must not end with a hyphen or contain two consecutive hyphens.
+  DBSubnetGroupName:
+    Default: dbsubnetgroup
+    Description: Notejam DB Subnet Group Name
+    Type: String
+    MinLength: '5'
+    MaxLength: '63'
+    AllowedPattern: '[a-z][a-z0-9]*'
+    ConstraintDescription: All lower case alphanumeric
 
 Resources:
   VPC:
@@ -33,13 +78,6 @@ Resources:
           Value: production
         - Key: Name
           Value: notejam-Prod
-
-  PrivateDNS:
-    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
-    Properties:
-      Description: The local dns hosted zone
-      Name: local
-      Vpc: !Ref VPC
 
   Subnet0:
     Type: AWS::EC2::Subnet
@@ -87,6 +125,33 @@ Resources:
     Properties:
       RouteTableId: !Ref RouteTable
       SubnetId: !Ref Subnet1
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Database Subnet Group
+      SubnetIds:
+        - !Ref Subnet0
+        - !Ref Subnet1
+      DBSubnetGroupName: !Ref DBSubnetGroupName
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DependsOn: DatabaseSubnetGroup
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceID
+      DBName: !Ref DBName
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref DBAllocatedStorage
+      Engine: mariadb
+      EngineVersion: 10.5
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      PubliclyAccessible: false
+      DBSubnetGroupName: !Ref DBSubnetGroupName
+      # TODO: Add Monitoring
+      # MonitoringInterval: '60'
+      # MonitoringRoleArn: !Join [ ':', [ 'arn:aws:iam:', !Ref AWS::AccountId, 'role/rds-monitoring-role' ] ]
 
   PublicIngressSG:
     Type: AWS::EC2::SecurityGroup
@@ -150,6 +215,10 @@ Resources:
                 awslogs-group : /ecs/notejam
                 awslogs-region : eu-west-2
                 awslogs-stream-prefix : ecs
+#          Environment:
+#            -
+#              ENVIRONMENT: production
+#              SQL_URI: !Join [ [ '/' ], !Join [ [ '@' ], !Join [ [ '' ], 'mysql://', !Join [ [ ':' ], !Ref DBUsername, !Ref DBPassword ] ], !GetAtt Database.Endpoint.Address ], !Ref DBName ]
       ExecutionRoleArn: !Ref ECSTaskExecutionRole
 
   CloudWatchLogGroup:
@@ -213,9 +282,6 @@ Resources:
 ##          ContainerPort: 5000
 ##          LoadBalancerName: !GetAtt LoadBalancer.LoadBalancerName
 ##          TargetGroupArn: !Ref LoadBalancerTargetGroup
-##      ServiceRegistries:
-##        -
-##          !Ref PrivateDNS
 #      DesiredCount: 1
 #      LaunchType: "FARGATE"
 #      PlatformVersion: "1.4.0"
