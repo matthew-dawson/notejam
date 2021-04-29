@@ -4,9 +4,6 @@ from notejam.config import ProductionConfig
 from notejam.config import TestingConfig
 import os
 
-#TODO: Determine environment based upon environment variable
-app.config.from_object(DevelopmentConfig)
-
 if __name__ == '__main__':
     environment = os.getenv('ENVIRONMENT', 'TESTING')
     sql_uri = os.getenv('SQL_URI')
