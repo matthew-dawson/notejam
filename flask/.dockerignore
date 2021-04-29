@@ -1,0 +1,6 @@
+docker
+docker-compose.yml
+aws
+deploy.sh
+deploy.bat
+!docker/app/docker-entrypoint.sh

@@ -1,0 +1,291 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  DBName:
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+    Default: 'notejam'
+    Description: The notejam database name
+    MaxLength: '64'
+    MinLength: '1'
+    Type: String
+  DBUsername:
+    NoEcho: 'true'
+    Description: Username for MySQL database access
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
+    Default: 'notejamuser'
+  DBPassword:
+    NoEcho: 'true'
+    Description: Password for Mysql database access
+    Type: String
+    MinLength: '8'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: Must contain only alphanumeric characters.
+    Default: 'notejampass'
+  DBRootPassword:
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+    Default: 'supersecret'
+    Description: MySQL root password
+    MaxLength: '41'
+    MinLength: '8'
+    NoEcho: 'true'
+    Type: String
+  DBInstanceClass:
+    Default: db.t3.micro
+    Description: DB instance class
+    Type: String
+    ConstraintDescription: Must select a valid DB instance type.
+  DBAllocatedStorage:
+    Default: '20'
+    Description: The size of the database (GiB)
+    Type: Number
+    MinValue: '20'
+    MaxValue: '65536'
+    ConstraintDescription:  Must be between 20 and 65536 GiB
+  DBInstanceID:
+    Default: notejamdb
+    Description: Notejam DB instance
+    Type: String
+    MinLength: '1'
+    MaxLength: '63'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must begin with a letter and must not end with a hyphen or contain two consecutive hyphens.
+  DBSubnetGroupName:
+    Default: dbsubnetgroup
+    Description: Notejam DB Subnet Group Name
+    Type: String
+    MinLength: '5'
+    MaxLength: '63'
+    AllowedPattern: '[a-z][a-z0-9]*'
+    ConstraintDescription: All lower case alphanumeric
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: 'default'
+      Tags:
+        - Key: stack
+          Value: production
+        - Key: Name
+          Value: notejam-Prod
+
+  Subnet0:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-2a
+      CidrBlock: 10.0.1.0/24
+      VpcId: !Ref VPC
+
+  Subnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-2b
+      CidrBlock: 10.0.0.0/24
+      VpcId: !Ref VPC
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref RouteTable
+      GatewayId: !Ref InternetGateway
+
+  SubnetAssociation0:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet0
+
+  SubnetAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet1
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Database Subnet Group
+      SubnetIds:
+        - !Ref Subnet0
+        - !Ref Subnet1
+      DBSubnetGroupName: !Ref DBSubnetGroupName
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DependsOn: DatabaseSubnetGroup
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceID
+      DBName: !Ref DBName
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref DBAllocatedStorage
+      Engine: mariadb
+      EngineVersion: 10.5
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      PubliclyAccessible: false
+      DBSubnetGroupName: !Ref DBSubnetGroupName
+      # TODO: Add Monitoring
+      # MonitoringInterval: '60'
+      # MonitoringRoleArn: !Join [ ':', [ 'arn:aws:iam:', !Ref AWS::AccountId, 'role/rds-monitoring-role' ] ]
+
+  PublicIngressSG:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: VPC
+    Properties:
+      GroupDescription: PublicAccessSG
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: "notejam/app"
+
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      CapacityProviders:
+        - FARGATE
+      ClusterName: notejam-cluster
+
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ecsTaskExecutionRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ecs-tasks.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+
+  ECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      RequiresCompatibilities:
+        - "FARGATE"
+      NetworkMode: awsvpc
+      Cpu: 256
+      Memory: 512
+      ContainerDefinitions:
+        -
+          Name: "notejam-app"
+          Image: !Join [ '/', [ !Join [ '.', [ !Ref AWS::AccountId, 'dkr.ecr', !Ref AWS::Region, 'amazonaws.com' ] ], !Ref ECRRepository ] ]
+          PortMappings:
+            -
+              ContainerPort: 5000
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+                awslogs-group : /ecs/notejam
+                awslogs-region : eu-west-2
+                awslogs-stream-prefix : ecs
+          Environment:
+            -
+              Name: ENVIRONMENT
+              Value: production
+            -
+              Name: SQL_URI
+              Value: !Join [ '/', [ 'mysql:/', !Join [ '@', [ !Join [ ':', [ !Ref DBUsername, !Ref DBPassword ] ], !Join [ '/', [ !GetAtt Database.Endpoint.Address, !Ref DBName ] ] ] ] ] ]
+      ExecutionRoleArn: !Ref ECSTaskExecutionRole
+
+  CloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: "/ecs/notejam"
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: "application"
+      Name: "notejam-alb"
+      Scheme: "internet-facing"
+      Subnets:
+        - !Ref Subnet0
+        - !Ref Subnet1
+      SecurityGroups:
+        - !Ref PublicIngressSG
+        - !GetAtt VPC.DefaultSecurityGroup
+      IpAddressType: "ipv4"
+
+  LoadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: "notejam-tg"
+      Protocol: "HTTP"
+      Port: 80
+      VpcId: !Ref VPC
+      HealthCheckProtocol: "HTTP"
+      HealthCheckPort: 80
+      TargetType: "ip"
+
+  LoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Protocol: "HTTP"
+      Port: 80
+      DefaultActions:
+        -
+          Type: "forward"
+          TargetGroupArn: !Ref LoadBalancerTargetGroup
+
+  ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      TaskDefinition: !Ref ECSTaskDefinition
+      Cluster: !Ref ECSCluster
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - !Ref Subnet0
+            - !Ref Subnet1
+          SecurityGroups:
+            - !GetAtt VPC.DefaultSecurityGroup
+          AssignPublicIp: ENABLED
+      LoadBalancers:
+        -
+          ContainerName: "notejam-app"
+          ContainerPort: 5000
+#          LoadBalancerName: !GetAtt LoadBalancer.LoadBalancerName
+          TargetGroupArn: !Ref LoadBalancerTargetGroup
+      DesiredCount: 1
+      LaunchType: FARGATE
+      PlatformVersion: "1.4.0"
+      SchedulingStrategy: REPLICA
+      HealthCheckGracePeriodSeconds: 20

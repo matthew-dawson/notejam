@@ -3,9 +3,6 @@ services:
 
   #MariaDB Service
   db:
-#    build:
-#      context: .
-#      dockerfile: ./docker/db/Dockerfile
     image: mariadb
     container_name: db
     restart: unless-stopped
@@ -13,8 +10,10 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_DATABASE: notejam
-      MYSQL_ROOT_PASSWORD: notejam_db
+      MYSQL_USER: 'notejamuser'
+      MYSQL_PASSWORD: 'notejampass'
+      MYSQL_DATABASE: 'notejam'
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
     volumes:
       - dbdata:/var/lib/mysql/
     networks:
@@ -32,10 +31,12 @@ services:
     ports:
       - "80:5000"
     environment:
-      - "FLASK_ENV=development"
+      ENVIRONMENT: 'development'
+      SQL_URI: 'mysql://notejamuser:notejampass@db/notejam'
+      FLASK_ENV: 'development'
     working_dir: /app
     volumes:
-      - ./flask/:/app
+      - ./:/app
     networks:
       - app-network
     depends_on:
