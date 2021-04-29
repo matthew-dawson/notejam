@@ -265,27 +265,27 @@ Resources:
           Type: "forward"
           TargetGroupArn: !Ref LoadBalancerTargetGroup
 
-#  ECSService:
-#    Type: AWS::ECS::Service
-#    Properties:
-#      ServiceName: notejam-service
-#      TaskDefinition: !Ref ECSTaskDefinition
-#      Cluster: !Ref ECSCluster
-#      NetworkConfiguration:
-#        AwsvpcConfiguration:
-#          Subnets:
-#            - !Ref Subnet0
-#            - !Ref Subnet1
-#          SecurityGroups:
-#            - !GetAtt VPC.DefaultSecurityGroup
-#          AssignPublicIp: ENABLED
-##      LoadBalancers:
-##        -
-##          ContainerName: "notejam-app"
-##          ContainerPort: 5000
-##          LoadBalancerName: !GetAtt LoadBalancer.LoadBalancerName
-##          TargetGroupArn: !Ref LoadBalancerTargetGroup
-#      DesiredCount: 1
-#      LaunchType: "FARGATE"
-#      PlatformVersion: "1.4.0"
-#      SchedulingStrategy: "REPLICA"
+  ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      TaskDefinition: !Ref ECSTaskDefinition
+      Cluster: !Ref ECSCluster
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - !Ref Subnet0
+            - !Ref Subnet1
+          SecurityGroups:
+            - !GetAtt VPC.DefaultSecurityGroup
+          AssignPublicIp: ENABLED
+      LoadBalancers:
+        -
+          ContainerName: "notejam-app"
+          ContainerPort: 5000
+#          LoadBalancerName: !GetAtt LoadBalancer.LoadBalancerName
+          TargetGroupArn: !Ref LoadBalancerTargetGroup
+      DesiredCount: 1
+      LaunchType: FARGATE
+      PlatformVersion: "1.4.0"
+      SchedulingStrategy: REPLICA
+      HealthCheckGracePeriodSeconds: 20
