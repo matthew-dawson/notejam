@@ -13,7 +13,7 @@ services:
       MYSQL_USER: 'notejamuser'
       MYSQL_PASSWORD: 'notejampass'
       MYSQL_DATABASE: 'notejam'
-      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+      MYSQL_RANDOM_ROOT_PASSWORD: 'true'
     volumes:
       - dbdata:/var/lib/mysql/
     networks:
